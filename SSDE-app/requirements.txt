@@ -1,6 +1,20 @@
-# Off-Axis Projection Demo — dependencies
+# SSDE — dependencies
 # Install: pip install -r requirements.txt
+#
+# IMPORTANT: Install NumPy 1.x FIRST, then OpenCV, then MediaPipe
+# to avoid version conflicts. MediaPipe will try to install opencv-contrib-python
+# which conflicts with opencv-python - we prevent this by installing opencv-python first.
+
+# Pin to NumPy 1.x FIRST - MediaPipe/matplotlib require this
+numpy>=1.24.0,<2.0
+
+# OpenCV 4.8-4.9.x compatible with NumPy 1.x; 4.10+ requires NumPy 2.x
+# Install BEFORE mediapipe to prevent opencv-contrib-python conflict
+opencv-python>=4.8.0,<4.10.0
 
 pygame>=2.5.0
-opencv-python>=4.8.0
 mediapipe>=0.10.0
+
+# Window capture & Windows API bindings
+mss>=9.0.0
+pywin32>=306

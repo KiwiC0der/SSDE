@@ -21,3 +21,11 @@ MEDIAPIPE_LANDMARK_INDEX = 168  # Nose tip for head position
 # Performance
 TARGET_FPS = 60
 WEBCAM_INDEX = 0
+
+
+# Window capture / SSDE settings
+
+# Optional substring to identify a default window for mirroring in Phase 1.
+# If empty, the app will not attempt automatic selection.
+DEFAULT_CAPTURE_WINDOW_KEYWORD = "Notepad"
+

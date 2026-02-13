@@ -40,9 +40,18 @@ os.environ.setdefault("OPENCV_LOG_LEVEL", "SILENT")
 
 try:
     import pygame
-    from config import WIN_WIDTH, WIN_HEIGHT, WIN_TITLE, TARGET_FPS
+    from config import (
+        WIN_WIDTH,
+        WIN_HEIGHT,
+        WIN_TITLE,
+        TARGET_FPS,
+    )
     from src.head_tracker import HeadTracker
     from src.renderer import draw_wireframe, draw_status, BACKGROUND
+    from src.window_capture import WindowCapture
+    from src.renderer_3d import numpy_to_surface, draw_textured_quad
+    from src.window_manager import WindowManager
+    from src.spatial_layout import grid_layout
 except ModuleNotFoundError as e:
     script_dir = os.path.dirname(os.path.abspath(__file__))
     venv_hint = ""
@@ -72,9 +81,9 @@ def center_window() -> None:
 
 def main() -> int:
     pygame.init()
-    center_window()
-
-    screen = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
+    # Fullscreen on the primary display for maximum immersion.
+    info = pygame.display.Info()
+    screen = pygame.display.set_mode((info.current_w, info.current_h), pygame.FULLSCREEN)
     pygame.display.set_caption(WIN_TITLE)
 
     tracker = HeadTracker()
@@ -82,6 +91,36 @@ def main() -> int:
         print("Error: Could not open webcam. Check that a camera is connected.", file=sys.stderr)
         pygame.quit()
         return 1
+
+    # Phase 1+: window mirroring setup (multi-window capable)
+    capturer = WindowCapture()
+    manager = WindowManager()
+
+    own_hwnd = None
+    try:
+        wm_info = pygame.display.get_wm_info()
+        own_hwnd = wm_info.get("window")
+    except Exception:
+        own_hwnd = None
+
+    # Discover a handful of candidate OS windows to mirror.
+    def _pred(hwnd: int, title: str) -> bool:
+        # Skip our own SSDE window.
+        if own_hwnd is not None and hwnd == own_hwnd:
+            return False
+        # Skip very small/tool windows.
+        return True
+
+    discovered = capturer.enumerate_windows(predicate=_pred)
+    # Register up to N windows for mirroring.
+    MAX_WINDOWS = 4
+    for idx, (_title, hwnd) in enumerate(discovered.items()):
+        if idx >= MAX_WINDOWS:
+            break
+        manager.add_or_update_window(hwnd)
+
+    # Give them a simple spatial layout.
+    grid_layout(manager.get_windows())
 
     clock = pygame.time.Clock()
     running = True
@@ -95,6 +134,16 @@ def main() -> int:
 
         hx, hy, face_ok = tracker.read_head_position()
         screen.fill(BACKGROUND)
+
+        # Update capture + textured quads for each managed window
+        for mw in manager.get_windows():
+            frame = capturer.capture_window(mw.hwnd)
+            if frame is None:
+                continue
+            tex_surf = numpy_to_surface(frame)
+            draw_textured_quad(screen, tex_surf, mw.quad_3d, hx, hy)
+
+        # Draw reference wireframe room and status overlay
         draw_wireframe(screen, hx, hy)
         draw_status(screen, face_ok)
         pygame.display.flip()
