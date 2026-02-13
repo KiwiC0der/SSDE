@@ -1,0 +1,12 @@
+# Virtual env
+venv/
+.venv/
+
+# Downloaded model (first run downloads here)
+models/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
